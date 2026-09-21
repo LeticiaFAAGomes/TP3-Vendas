@@ -1,6 +1,8 @@
 package com.exemplo.authservice.controller;
 
 import com.exemplo.authservice.dto.LoginRequest;
+import com.exemplo.authservice.dto.LoginResponse;
+import com.exemplo.authservice.dto.RefreshRequest;
 import com.exemplo.authservice.dto.UsuarioRequest;
 import com.exemplo.authservice.model.Usuario;
 import com.exemplo.authservice.service.JwtToken;
@@ -28,9 +30,44 @@ public class UsuarioController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody LoginRequest request) {
-        Usuario usuario = this.service.autenticar(request);
-        String token = jwtService.gerarToken(usuario);
-        return ResponseEntity.ok(token);
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+
+        Usuario usuario = service.autenticar(request);
+
+        String accessToken = jwtService.gerarAccessToken(usuario);
+        String refreshToken = jwtService.gerarRefreshToken(usuario);
+
+        return ResponseEntity.ok(
+                new LoginResponse(accessToken, refreshToken)
+        );
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(
+            @RequestBody RefreshRequest request) {
+
+        try {
+            String refreshToken = request.refreshToken();
+
+            if (!jwtService.ehRefreshToken(refreshToken)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            String email = jwtService.extrairEmail(refreshToken);
+
+            Usuario usuario = service.buscarPorEmail(email);
+
+            String novoAccessToken = jwtService.gerarAccessToken(usuario);
+
+            return ResponseEntity.ok(
+                    new LoginResponse(
+                            novoAccessToken,
+                            refreshToken
+                    )
+            );
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 }

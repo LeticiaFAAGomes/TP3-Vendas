@@ -25,7 +25,8 @@ public class TokenFilter implements GlobalFilter, Ordered {
     // cadastrar nem pegar o primeiro token -- o sistema tranca por fora.
     private static final List<String> LIVRES = List.of(
             "/auth-service/usuarios/login",
-            "/auth-service/usuarios");
+            "/auth-service/usuarios",
+            "/auth-service/usuarios/refresh");
 
     private final SecretKey chave;
 

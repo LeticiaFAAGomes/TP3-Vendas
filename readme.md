@@ -93,6 +93,48 @@ O `vendas-service` consulta o `produtos-service` (via `ProdutoInterface`) para v
 
 ---
 
+# 🔐 Autenticação
+
+A autenticação do sistema utiliza **JWT (JSON Web Token)**.
+
+O responsável pela autenticação é o:
+
+```text
+auth-service
+```
+
+O serviço possui responsabilidade independente dos demais microsserviços.
+
+### Fluxo de autenticação
+
+```text
+Usuário
+   │
+   │ login
+   ▼
+auth-service
+   │
+   │ valida credenciais
+   ▼
+JWT
+   │
+   │ Authorization: Bearer <token>
+   ▼
+Gateway
+   │
+   │ valida JWT
+   ▼
+Microsserviço protegido
+```
+
+As requisições que não possuem uma credencial válida são rejeitadas pelo Gateway com:
+
+```text
+401 Unauthorized
+```
+
+---
+
 # 🔐 auth-service
 
 O `auth-service` é responsável pela **autenticação e autorização** dos usuários do sistema.
@@ -100,10 +142,12 @@ O `auth-service` é responsável pela **autenticação e autorização** dos usu
 ### Responsabilidades
 
 - Cadastrar usuários.
-- Autenticar usuários (login).
+- Autenticar usuários.
+- Validar e-mail e senha.
+- Criptografar senhas utilizando BCrypt.
 - Gerar tokens JWT.
-- Validar tokens JWT.
-- Criptografar as senhas dos usuários (`SenhaConfig`).
+- Disponibilizar o endpoint de login.
+- Disponibilizar o endpoint de refresh.
 - Persistir os usuários em seu próprio banco de dados.
 
 ### Estrutura
