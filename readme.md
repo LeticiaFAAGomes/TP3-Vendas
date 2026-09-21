@@ -135,9 +135,9 @@ As requisições que não possuem uma credencial válida são rejeitadas pelo Ga
 
 ---
 
-# 🔐 auth-service
+# 🔑 auth-service
 
-O `auth-service` é responsável pela **autenticação e autorização** dos usuários do sistema.
+O `auth-service` é responsável pela autenticação dos usuários.
 
 ### Responsabilidades
 
@@ -154,6 +154,7 @@ O `auth-service` é responsável pela **autenticação e autorização** dos usu
 
 ```text
 auth-service/
+
 └── src/main
     ├── java/com/exemplo/authservice
     │   ├── config
@@ -176,14 +177,106 @@ auth-service/
         └── application.properties
 ```
 
-### Endpoints
+---
 
-| Método | Endpoint          | Descrição                                      |
-| ------ | ----------------- | ---------------------------------------------- |
-| POST   | `/usuarios`       | Cadastra um novo usuário e retorna o ID gerado |
-| POST   | `/usuarios/login` | Autentica o usuário e retorna o token JWT      |
+# 🔓 Endpoints Públicos
 
-O `JwtToken` é responsável por gerar e validar os tokens JWT utilizados pelo Gateway para proteger as demais rotas do sistema.
+As seguintes rotas não exigem token JWT:
+
+| Método | Endpoint            | Descrição                        |
+| ------ | ------------------- | -------------------------------- |
+| POST   | `/usuarios`         | Cadastro de usuário              |
+| POST   | `/usuarios/login`   | Autenticação e obtenção do token |
+| POST   | `/usuarios/refresh` | Renovação do token               |
+
+No Gateway, essas rotas devem ser liberadas para permitir que o usuário se cadastre, realize login e renove sua credencial.
+
+---
+
+# 🔒 Endpoints Protegidos
+
+As rotas dos demais microsserviços exigem autenticação válida.
+
+| Método | Endpoint         | Descrição            |
+| ------ | ---------------- | -------------------- |
+| GET    | `/clientes`      | Lista clientes       |
+| GET    | `/produtos`      | Lista produtos       |
+| GET    | `/produtos/{id}` | Busca produto por ID |
+| GET    | `/vendas`        | Consulta vendas      |
+| POST   | `/vendas`        | Registra uma venda   |
+
+O token deve ser enviado no cabeçalho HTTP:
+
+```http
+Authorization: Bearer <token>
+```
+
+---
+
+# 🔄 Refresh Token
+
+O sistema deve disponibilizar uma rota para renovação da credencial:
+
+```http
+POST /usuarios/refresh
+```
+
+O objetivo do endpoint é permitir que o usuário obtenha uma nova credencial de acesso utilizando o mecanismo de refresh definido pela aplicação.
+
+Fluxo esperado:
+
+```text
+Access Token
+     │
+     │ expira / precisa ser renovado
+     ▼
+POST /usuarios/refresh
+     │
+     ▼
+Novo token de acesso
+```
+
+---
+
+# 🚦 Proteção das Rotas
+
+O Gateway possui um `TokenFilter` responsável por verificar as requisições.
+
+O filtro:
+
+1. Identifica a rota acessada.
+2. Verifica se a rota é pública.
+3. Caso seja protegida, procura o cabeçalho `Authorization`.
+4. Verifica se o formato utiliza `Bearer`.
+5. Valida a assinatura do JWT.
+6. Libera a requisição quando o token é válido.
+7. Retorna `401 Unauthorized` quando o token é ausente ou inválido.
+
+### Fluxo
+
+```text
+Requisição
+    │
+    ▼
+Gateway
+    │
+    ├── Rota pública ──────► encaminha
+    │
+    └── Rota protegida
+            │
+            ▼
+       Possui JWT?
+        │       │
+       não     sim
+        │       │
+       401      ▼
+             JWT válido?
+              │      │
+             não    sim
+              │      │
+             401    ▼
+                 encaminha
+```
 
 ---
 
